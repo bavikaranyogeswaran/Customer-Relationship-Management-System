@@ -5,7 +5,7 @@
 // specific CRM leads for audit and history tracking.
 // ==============================================================================
 
-import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch, Delete, Query } from '@nestjs/common';
 import { NotesService } from './notes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -25,10 +25,10 @@ export class NotesController {
 
   // FIND BY LEAD: Retrieves all notes associated with a specific lead identifier.
   @Get()
-  findByLead(@Param('leadId') leadId: string, @Request() req) {
+  findByLead(@Param('leadId') leadId: string, @Request() req, @Query() query: any) {
     // 1. [SECURITY] Verify user has permission to view notes for this specific lead
     // 2. [DB] Fetch lead-specific notes
-    return this.notesService.findByLead(leadId, req.user);
+    return this.notesService.findByLead(leadId, req.user, query);
   }
 
   @Patch(':id')

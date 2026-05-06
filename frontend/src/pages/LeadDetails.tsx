@@ -1,24 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../lib/axios';
+import api from '@/lib/axios';
 import { format } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Badge } from '../components/ui/badge';
-import { ArrowLeft, Send, Building2, Mail, Phone, Globe, Calendar } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Send, Building2, Mail, Phone, Globe, Calendar, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import { Trash2, Edit2, Check, X as CloseIcon } from 'lucide-react';
 
 export default function LeadDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [lead, setLead] = useState<any>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
@@ -26,37 +28,67 @@ export default function LeadDetails() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [notesMeta, setNotesMeta] = useState({ page: 1, last_page: 1 });
+  const [isLoadingNotes, setIsLoadingNotes] = useState(false);
 
-  const fetchLeadDetails = async () => {
+  const fetchLeadDetails = useCallback(async () => {
     try {
-      const [leadRes, notesRes] = await Promise.all([
-        api.get(`/leads/${id}`),
-        api.get(`/leads/${id}/notes`)
-      ]);
+      const leadRes = await api.get(`/leads/${id}`);
       setLead(leadRes.data);
-      setNotes(notesRes.data);
     } catch (err) {
       toast.error('Failed to fetch lead details');
       navigate('/leads');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  const fetchNotes = useCallback(async (page = 1) => {
+    setIsLoadingNotes(true);
+    try {
+      const notesRes = await api.get(`/leads/${id}/notes`, { params: { page, limit: 10 } });
+      if (page === 1) {
+        setNotes(notesRes.data.data);
+      } else {
+        setNotes(prev => [...prev, ...notesRes.data.data]);
+      }
+      setNotesMeta(notesRes.data.meta);
+    } catch (err) {
+      toast.error('Failed to fetch notes');
+    } finally {
+      setIsLoadingNotes(false);
+    }
+  }, [id]);
 
   useEffect(() => {
     fetchLeadDetails();
-  }, [id]);
+    fetchNotes(1);
+  }, [fetchLeadDetails, fetchNotes]);
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim()) return;
 
+    const tempNote = {
+      id: `temp-${Date.now()}`,
+      content: newNote,
+      author_name: currentUser?.name || 'You',
+      created_at: new Date().toISOString(),
+      isOptimistic: true,
+    };
+
+    setNotes(prev => [tempNote, ...prev]);
+    setNewNote('');
+
     try {
-      await api.post(`/leads/${id}/notes`, { content: newNote });
-      setNewNote('');
+      await api.post(`/leads/${id}/notes`, { content: tempNote.content });
       toast.success('Note added');
-      fetchLeadDetails();
+      // Refresh to get official ID and order
+      const notesRes = await api.get(`/leads/${id}/notes`, { params: { page: 1, limit: 10 } });
+      setNotes(notesRes.data.data);
+      setNotesMeta(notesRes.data.meta);
     } catch (err) {
+      setNotes(prev => prev.filter(n => n.id !== tempNote.id));
       toast.error('Failed to add note');
     }
   };
@@ -220,44 +252,61 @@ export default function LeadDetails() {
                 {notes.length === 0 ? (
                   <div className="text-center py-8 text-slate-500 text-sm">No notes yet. Add one below!</div>
                 ) : (
-                  notes.map((note) => (
-                    <div key={note.id} className="bg-slate-50 p-4 rounded-lg border border-slate-100 group">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-slate-800 text-sm">{note.author_name}</span>
-                          <span className="text-[10px] text-slate-400 uppercase">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditingNoteId(note.id); setEditNoteContent(note.content); }}>
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:bg-red-50" onClick={() => handleDeleteNote(note.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      {editingNoteId === note.id ? (
-                        <div className="space-y-2 mt-2">
-                          <Input 
-                            value={editNoteContent}
-                            onChange={(e: any) => setEditNoteContent(e.target.value)}
-                            className="text-sm bg-white"
-                            autoFocus
-                          />
-                          <div className="flex gap-2 justify-end">
-                            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setEditingNoteId(null)}>
-                              <CloseIcon className="h-3 w-3 mr-1" /> Cancel
-                            </Button>
-                            <Button size="sm" className="h-7 px-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => handleUpdateNote(note.id)}>
-                              <Check className="h-3 w-3 mr-1" /> Save
-                            </Button>
+                  <>
+                    {notes.map((note) => (
+                      <div key={note.id} className={`bg-slate-50 p-4 rounded-lg border border-slate-100 group ${note.isOptimistic ? 'opacity-50' : ''}`}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-slate-800 text-sm">{note.author_name}</span>
+                            <span className="text-[10px] text-slate-400 uppercase">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
                           </div>
+                          {!note.isOptimistic && (
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditingNoteId(note.id); setEditNoteContent(note.content); }}>
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:bg-red-50" onClick={() => handleDeleteNote(note.id)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{note.content}</p>
-                      )}
-                    </div>
-                  ))
+                        {editingNoteId === note.id ? (
+                          <div className="space-y-2 mt-2">
+                            <Input 
+                              value={editNoteContent}
+                              onChange={(e: any) => setEditNoteContent(e.target.value)}
+                              className="text-sm bg-white"
+                              autoFocus
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setEditingNoteId(null)}>
+                                <CloseIcon className="h-3 w-3 mr-1" /> Cancel
+                              </Button>
+                              <Button size="sm" className="h-7 px-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => handleUpdateNote(note.id)}>
+                                <Check className="h-3 w-3 mr-1" /> Save
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{note.content}</p>
+                        )}
+                      </div>
+                    ))}
+                    {notesMeta.page < notesMeta.last_page && (
+                      <div className="flex justify-center pt-4">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          disabled={isLoadingNotes} 
+                          onClick={() => fetchNotes(notesMeta.page + 1)}
+                        >
+                          {isLoadingNotes ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          Load More Notes
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
               

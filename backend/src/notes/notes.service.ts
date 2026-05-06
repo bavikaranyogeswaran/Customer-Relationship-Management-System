@@ -40,22 +40,39 @@ export class NotesService {
     return res.rows[0];
   }
 
-  // FIND BY LEAD: Retrieves a chronological list of notes with author attribution.
-  async findByLead(leadId: string, user: { id: string; role: string }) {
+  // FIND BY LEAD: Retrieves a paginated list of notes with author attribution.
+  async findByLead(leadId: string, user: { id: string; role: string }, query: { page?: number; limit?: number }) {
     // 1. [SECURITY] Verify access to the parent lead entity
     await this.leadsService.findOne(leadId, user);
     
-    // 2. [DB] Fetch all notes for the lead, joining with the users table for author names
-    // Provides a complete audit trail of lead interactions
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    // 2. [DB] Fetch paginated notes, joining with users for author attribution
     const res = await this.pool.query(
       `SELECT n.*, u.name as author_name 
        FROM notes n 
        JOIN users u ON n.author_id = u.id 
        WHERE n.lead_id = $1 AND n.deleted_at IS NULL
-       ORDER BY n.created_at DESC`,
+       ORDER BY n.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [leadId, limit, offset]
+    );
+
+    const countRes = await this.pool.query(
+      `SELECT COUNT(*) FROM notes WHERE lead_id = $1 AND deleted_at IS NULL`,
       [leadId]
     );
-    return res.rows;
+
+    return {
+      data: res.rows,
+      meta: {
+        total: parseInt(countRes.rows[0].count, 10),
+        page,
+        last_page: Math.ceil(parseInt(countRes.rows[0].count, 10) / limit),
+      }
+    };
   }
 
   // UPDATE: Modifies a note's content if the user is the author or admin.
