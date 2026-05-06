@@ -8,6 +8,11 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateLeadDto } from './create-lead.dto';
 
+import { IsOptional, IsNumber } from 'class-validator';
+
 // 1. [VALIDATION] Enable partial validation using the CreateLeadDto properties
-// Allows clients to update only specific fields of a lead record
-export class UpdateLeadDto extends PartialType(CreateLeadDto) {}
+export class UpdateLeadDto extends PartialType(CreateLeadDto) {
+  @IsOptional()
+  @IsNumber()
+  version?: number;
+}

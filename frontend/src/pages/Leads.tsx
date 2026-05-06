@@ -129,8 +129,7 @@ export default function Leads() {
               <TableHead>Lead</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Value</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Added</TableHead>
+              <TableHead>Added / Updated</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -158,9 +157,11 @@ export default function Leads() {
                   <TableCell className="font-medium text-slate-900">
                     ${Number(lead.deal_value).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-slate-500">{lead.source}</TableCell>
                   <TableCell className="text-slate-500">
-                    {format(new Date(lead.created_at), 'MMM d, yyyy')}
+                    <div className="text-sm">{format(new Date(lead.created_at), 'MMM d, yyyy')}</div>
+                    {lead.updated_at && (
+                      <div className="text-[10px] text-slate-400 uppercase italic">Updated: {format(new Date(lead.updated_at), 'MMM d')}</div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

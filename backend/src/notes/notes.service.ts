@@ -51,10 +51,43 @@ export class NotesService {
       `SELECT n.*, u.name as author_name 
        FROM notes n 
        JOIN users u ON n.author_id = u.id 
-       WHERE n.lead_id = $1 
+       WHERE n.lead_id = $1 AND n.deleted_at IS NULL
        ORDER BY n.created_at DESC`,
       [leadId]
     );
     return res.rows;
+  }
+
+  // UPDATE: Modifies a note's content if the user is the author or admin.
+  async update(id: string, content: string, user: { id: string; role: string }) {
+    const noteRes = await this.pool.query('SELECT * FROM notes WHERE id = $1 AND deleted_at IS NULL', [id]);
+    if (noteRes.rows.length === 0) throw new BadRequestException('Note not found');
+    const note = noteRes.rows[0];
+
+    if (user.role !== 'admin' && note.author_id !== user.id) {
+      throw new BadRequestException('Permission denied: You can only edit your own notes');
+    }
+
+    if (!content || content.trim().length === 0) throw new BadRequestException('Content cannot be empty');
+
+    const res = await this.pool.query(
+      'UPDATE notes SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+      [content.trim(), id]
+    );
+    return res.rows[0];
+  }
+
+  // REMOVE: Soft-deletes a note if the user is the author or admin.
+  async remove(id: string, user: { id: string; role: string }) {
+    const noteRes = await this.pool.query('SELECT * FROM notes WHERE id = $1 AND deleted_at IS NULL', [id]);
+    if (noteRes.rows.length === 0) throw new BadRequestException('Note not found');
+    const note = noteRes.rows[0];
+
+    if (user.role !== 'admin' && note.author_id !== user.id) {
+      throw new BadRequestException('Permission denied: You can only delete your own notes');
+    }
+
+    await this.pool.query('UPDATE notes SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
+    return { success: true };
   }
 }

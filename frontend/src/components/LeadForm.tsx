@@ -13,6 +13,7 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
     source: lead?.source || 'Website',
     status: lead?.status || 'New',
     deal_value: lead?.deal_value || 0,
+    version: lead?.version || 1,
   });
   const [loading, setLoading] = useState(false);
 
@@ -72,8 +73,22 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
           </select>
         </div>
         <div className="space-y-2">
+          <label className="text-sm font-medium">Source</label>
+          <select 
+            className="w-full h-10 px-3 py-2 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
+            value={formData.source}
+            onChange={(e: any) => setFormData({...formData, source: e.target.value})}
+          >
+            <option value="Website">Website</option>
+            <option value="Referral">Referral</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="Cold Email">Cold Email</option>
+            <option value="Event">Event</option>
+          </select>
+        </div>
+        <div className="space-y-2">
           <label className="text-sm font-medium">Deal Value ($)</label>
-          <Input type="number" value={formData.deal_value} onChange={(e: any) => setFormData({...formData, deal_value: Number(e.target.value)})} />
+          <Input type="number" min="0" value={formData.deal_value} onChange={(e: any) => setFormData({...formData, deal_value: Number(e.target.value)})} />
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-4">
