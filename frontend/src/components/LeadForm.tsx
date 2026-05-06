@@ -39,20 +39,20 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <label className="text-sm font-medium">Name</label>
-        <Input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+        <Input required value={formData.name} onChange={(e: any) => setFormData({...formData, name: e.target.value})} />
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium">Company</label>
-        <Input value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} />
+        <Input value={formData.company} onChange={(e: any) => setFormData({...formData, company: e.target.value})} />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Email</label>
-          <Input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+          <Input type="email" value={formData.email} onChange={(e: any) => setFormData({...formData, email: e.target.value})} />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Phone</label>
-          <Input value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+          <Input value={formData.phone} onChange={(e: any) => setFormData({...formData, phone: e.target.value})} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -61,7 +61,7 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
           <select 
             className="w-full h-10 px-3 py-2 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
             value={formData.status}
-            onChange={(e) => setFormData({...formData, status: e.target.value})}
+            onChange={(e: any) => setFormData({...formData, status: e.target.value})}
           >
             <option value="New">New</option>
             <option value="Contacted">Contacted</option>
@@ -73,7 +73,7 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Deal Value ($)</label>
-          <Input type="number" value={formData.deal_value} onChange={(e) => setFormData({...formData, deal_value: Number(e.target.value)})} />
+          <Input type="number" value={formData.deal_value} onChange={(e: any) => setFormData({...formData, deal_value: Number(e.target.value)})} />
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-4">

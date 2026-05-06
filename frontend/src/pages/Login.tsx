@@ -73,7 +73,7 @@ export default function Login() {
                     required 
                     placeholder="John Doe" 
                     value={name} 
-                    onChange={(e) => setName(e.target.value)} 
+                    onChange={(e: any) => setName(e.target.value)} 
                     className="bg-white"
                   />
                 </div>
@@ -86,7 +86,7 @@ export default function Login() {
                   type="email" 
                   placeholder="admin@crm.com" 
                   value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
+                  onChange={(e: any) => setEmail(e.target.value)} 
                   className="bg-white"
                 />
               </div>
@@ -101,7 +101,7 @@ export default function Login() {
                   type="password" 
                   placeholder="••••••••" 
                   value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
+                  onChange={(e: any) => setPassword(e.target.value)} 
                   className="bg-white"
                 />
               </div>

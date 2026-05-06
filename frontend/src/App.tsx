@@ -4,10 +4,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Leads from './pages/Leads';
+import Dashboard from './pages/Dashboard';
+import LeadDetails from './pages/LeadDetails';
 import { Toaster } from './components/ui/sonner';
-
-// Temporary placeholders for Phase 8
-const DashboardPlaceholder = () => <div className="p-4"><h1 className="text-2xl font-bold">Dashboard</h1><p>Coming in Phase 8</p></div>;
 
 function App() {
   return (
@@ -18,8 +17,9 @@ function App() {
           
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
-              <Route path="/" element={<DashboardPlaceholder />} />
+              <Route path="/" element={<Dashboard />} />
               <Route path="/leads" element={<Leads />} />
+              <Route path="/leads/:id" element={<LeadDetails />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Route>

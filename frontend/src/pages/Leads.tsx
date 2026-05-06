@@ -104,13 +104,13 @@ export default function Leads() {
             placeholder="Search leads..." 
             className="pl-9 bg-white"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setMeta(m => ({...m, page: 1}))}}
+            onChange={(e: any) => { setSearch(e.target.value); setMeta(m => ({...m, page: 1}))}}
           />
         </div>
         <select 
           className="h-10 px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
           value={status}
-          onChange={(e) => { setStatus(e.target.value); setMeta(m => ({...m, page: 1}))}}
+          onChange={(e: any) => { setStatus(e.target.value); setMeta(m => ({...m, page: 1}))}}
         >
           <option value="">All Statuses</option>
           <option value="New">New</option>
@@ -164,10 +164,10 @@ export default function Leads() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={(e) => handleEdit(lead, e)}>
+                      <Button variant="ghost" size="icon" onClick={(e: any) => handleEdit(lead, e)}>
                         <Edit2 className="w-4 h-4 text-slate-500 hover:text-indigo-600" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDelete(lead.id); }}>
+                      <Button variant="ghost" size="icon" onClick={(e: any) => { e.stopPropagation(); handleDelete(lead.id); }}>
                         <Trash2 className="w-4 h-4 text-slate-500 hover:text-red-600" />
                       </Button>
                     </div>
