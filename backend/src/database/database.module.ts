@@ -23,9 +23,16 @@ export const PG_POOL = 'PG_POOL';
       // Using a pool ensures efficient connection reuse across the application
       provide: PG_POOL,
       useFactory: () => {
-        return new Pool({
+        const pool = new Pool({
           connectionString: process.env.DATABASE_URL,
         });
+        
+        // [STABILITY] Handle unexpected pool errors (e.g. idle client connectivity loss)
+        pool.on('error', (err) => {
+          console.error('Unexpected error on idle client', err);
+        });
+
+        return pool;
       },
     },
   ],

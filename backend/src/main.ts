@@ -9,6 +9,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   // 1. [PERFORMANCE] Initialize Nest application using the root AppModule
@@ -27,8 +28,10 @@ async function bootstrap() {
   });
 
   // 3. [VALIDATION] Enable global validation pipes
-  // Ensures all incoming request payloads strictly adhere to DTO definitions
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+
+  // 3.1 [SECURITY] Register global exception filter to sanitize internal errors
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // 4. [SIDE EFFECT] Start listening for incoming HTTP requests
   await app.listen(process.env.PORT ?? 3000);

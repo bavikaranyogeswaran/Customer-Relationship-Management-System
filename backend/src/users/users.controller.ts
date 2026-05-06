@@ -5,7 +5,7 @@
 // and internal registry operations.
 // ==============================================================================
 
-import { Controller, Post, Body, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -17,6 +17,14 @@ import * as bcrypt from 'bcrypt';
 export class UsersController {
   // CONSTRUCTOR: Injects UsersService to handle user persistence logic.
   constructor(private readonly usersService: UsersService) {}
+
+  // FIND ALL: Retrieves a list of all users for internal registry lookups (e.g., lead assignment).
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Get()
+  async findAll() {
+    return this.usersService.findAll();
+  }
 
   // CREATE USER: Administrative endpoint for manually registering new system users.
   @UseGuards(JwtAuthGuard, RolesGuard)

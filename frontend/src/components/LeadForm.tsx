@@ -1,10 +1,13 @@
-import { useState } from 'react';
-import api from '../lib/axios';
+import { useState, useEffect } from 'react';
+import api from '@/lib/axios';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onClose: () => void, onSuccess: () => void }) {
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: lead?.name || '',
     company: lead?.company || '',
@@ -13,9 +16,28 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
     source: lead?.source || 'Website',
     status: lead?.status || 'New',
     deal_value: lead?.deal_value || 0,
+    assigned_to: lead?.assigned_to || '',
     version: lead?.version || 1,
   });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (currentUser?.role === 'admin') {
+        try {
+          const res = await api.get('/users');
+          setUsers(res.data);
+          // If creating new lead and no assignee, default to current user
+          if (!lead && !formData.assigned_to) {
+             setFormData(prev => ({ ...prev, assigned_to: currentUser.id }));
+          }
+        } catch (err) {
+          console.error('Failed to fetch users');
+        }
+      }
+    };
+    fetchUsers();
+  }, [currentUser, lead]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +112,21 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
           <label className="text-sm font-medium">Deal Value ($)</label>
           <Input type="number" min="0" value={formData.deal_value} onChange={(e: any) => setFormData({...formData, deal_value: Number(e.target.value)})} />
         </div>
+        {currentUser?.role === 'admin' && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Assign To</label>
+            <select 
+              className="w-full h-10 px-3 py-2 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              value={formData.assigned_to}
+              onChange={(e: any) => setFormData({...formData, assigned_to: e.target.value})}
+            >
+              <option value="">Select Assignee</option>
+              {users.map(u => (
+                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

@@ -15,16 +15,22 @@ export class UsersService {
   constructor(@Inject(PG_POOL) private pool: Pool) {}
 
   // FIND BY EMAIL: Retrieves a user record using their email address.
-  async findByEmail(email: string): Promise<any | undefined> {
-    // 1. [DB] Execute query to find user by email
-    const res = await this.pool.query('SELECT * FROM users WHERE email = $1', [email]);
+  async findByEmail(email: string): Promise<any> {
+    // 1. [DB] Execute query to find user by email with column sanitization
+    const res = await this.pool.query(
+      'SELECT id, email, password_hash, name, role, failed_login_attempts, locked_until, created_at FROM users WHERE email = $1', 
+      [email]
+    );
     return res.rows[0];
   }
 
   // FIND BY ID: Retrieves a user record using their unique identifier.
-  async findById(id: string): Promise<any | undefined> {
-    // 1. [DB] Execute query to find user by primary key
-    const res = await this.pool.query('SELECT * FROM users WHERE id = $1', [id]);
+  async findById(id: string): Promise<any> {
+    // 1. [DB] Execute query to find user by primary key with column sanitization
+    const res = await this.pool.query(
+      'SELECT id, email, name, role, failed_login_attempts, locked_until, created_at FROM users WHERE id = $1', 
+      [id]
+    );
     return res.rows[0];
   }
 
@@ -72,5 +78,11 @@ export class UsersService {
        WHERE id = $1`,
       [userId]
     );
+  }
+
+  // FIND ALL: Retrieves a list of all users for administrative purposes (e.g., lead assignment).
+  async findAll(): Promise<any[]> {
+    const res = await this.pool.query('SELECT id, name, email, role FROM users ORDER BY name ASC');
+    return res.rows;
   }
 }
