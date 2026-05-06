@@ -51,8 +51,26 @@ export class UsersService {
       [user.email, user.password_hash, user.name, role],
     );
     
-    // 3. [SECURITY] Sanitization: Exclude sensitive credentials from response
     const { password_hash, ...result } = res.rows[0];
     return result;
+  }
+
+  async incrementFailedAttempts(userId: string) {
+    await this.pool.query(
+      `UPDATE users 
+       SET failed_login_attempts = failed_login_attempts + 1,
+           locked_until = CASE WHEN failed_login_attempts + 1 >= 5 THEN NOW() + interval '15 minutes' ELSE NULL END
+       WHERE id = $1`,
+      [userId]
+    );
+  }
+
+  async resetFailedAttempts(userId: string) {
+    await this.pool.query(
+      `UPDATE users 
+       SET failed_login_attempts = 0, locked_until = NULL
+       WHERE id = $1`,
+      [userId]
+    );
   }
 }

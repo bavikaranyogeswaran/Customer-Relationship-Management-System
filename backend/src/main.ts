@@ -7,11 +7,15 @@
 
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   // 1. [PERFORMANCE] Initialize Nest application using the root AppModule
   const app = await NestFactory.create(AppModule);
+
+  // 1.1 [SECURITY] Use cookie-parser for secure HTTP-only refresh tokens
+  app.use(cookieParser());
 
   // 2. [SECURITY] Configure Cross-Origin Resource Sharing (CORS)
   // Restricts API access to the trusted frontend origin to prevent unauthorized cross-site requests

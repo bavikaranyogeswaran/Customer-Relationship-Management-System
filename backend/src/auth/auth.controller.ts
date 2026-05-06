@@ -5,25 +5,50 @@
 // and protected profile retrieval.
 // ==============================================================================
 
-import { Controller, Request, Post, UseGuards, Get, BadRequestException } from '@nestjs/common';
+import { Controller, Request, Post, UseGuards, Get, Response, UnauthorizedException } from '@nestjs/common';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { LocalAuthGuard } from './local-auth.guard';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import type { Response as Res } from 'express';
 
 @Controller('auth')
 export class AuthController {
   // CONSTRUCTOR: Injects AuthService for credential validation and token generation.
   constructor(private authService: AuthService) {}
 
-  // LOGIN: Authenticates user credentials and issues a JWT token.
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Request() req) {
-    // 1. [SECURITY] Authenticate via LocalStrategy (handled by Guard)
-    // 2. [SIDE EFFECT] Generate and return JWT access token
-    return this.authService.login(req.user);
+  async login(@Request() req, @Response({ passthrough: true }) res: Res) {
+    const { access_token, refresh_token, user } = await this.authService.login(req.user);
+    
+    // 1. [SECURITY] Set refresh token in HTTP-only cookie
+    res.cookie('refresh_token', refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return { access_token, user };
+  }
+
+  // REFRESH: Generates a new access token using the refresh token from cookies.
+  @Post('refresh')
+  async refresh(@Request() req, @Response({ passthrough: true }) res: Res) {
+    const refreshToken = req.cookies?.refresh_token;
+    if (!refreshToken) throw new UnauthorizedException('Refresh token missing');
+    
+    const { access_token, user } = await this.authService.refresh(refreshToken);
+    return { access_token, user };
+  }
+
+  // LOGOUT: Clears the secure refresh token cookie.
+  @Post('logout')
+  async logout(@Response({ passthrough: true }) res: Res) {
+    res.clearCookie('refresh_token');
+    return { message: 'Logged out successfully' };
   }
 
   // GET PROFILE: Returns the authenticated user's profile details.

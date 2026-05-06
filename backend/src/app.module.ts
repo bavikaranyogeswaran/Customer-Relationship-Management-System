@@ -26,6 +26,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
       isGlobal: true,
       validationSchema: Joi.object({
         JWT_SECRET: Joi.string().min(32).required(),
+        JWT_REFRESH_SECRET: Joi.string().min(32).required(),
         DATABASE_URL: Joi.string().required(),
         PORT: Joi.number().default(3000),
       }),
