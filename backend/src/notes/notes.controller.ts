@@ -9,11 +9,11 @@ export class NotesController {
 
   @Post()
   create(@Request() req, @Param('leadId') leadId: string, @Body('content') content: string) {
-    return this.notesService.create(leadId, req.user.id, content);
+    return this.notesService.create(leadId, req.user.id, content, req.user);
   }
 
   @Get()
-  findByLead(@Param('leadId') leadId: string) {
-    return this.notesService.findByLead(leadId);
+  findByLead(@Param('leadId') leadId: string, @Request() req) {
+    return this.notesService.findByLead(leadId, req.user);
   }
 }

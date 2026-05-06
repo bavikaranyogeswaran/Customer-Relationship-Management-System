@@ -27,14 +27,4 @@ export class AuthService {
     };
   }
 
-  async register(email: string, pass: string, name: string) {
-    const existing = await this.usersService.findByEmail(email);
-    if (existing) {
-      throw new Error('User already exists');
-    }
-    const hash = await bcrypt.hash(pass, 10);
-    const user = await this.usersService.create({ email, password_hash: hash, name });
-    const { password_hash, ...result } = user;
-    return result;
-  }
 }

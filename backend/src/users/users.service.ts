@@ -21,6 +21,17 @@ export class UsersService {
       'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING *',
       [user.email, user.password_hash, user.name],
     );
-    return res.rows[0];
+    const { password_hash, ...result } = res.rows[0];
+    return result;
+  }
+
+  async adminCreate(user: { email: string; password_hash: string; name: string; role?: string }): Promise<any> {
+    const role = user.role || 'user';
+    const res = await this.pool.query(
+      'INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING *',
+      [user.email, user.password_hash, user.name, role],
+    );
+    const { password_hash, ...result } = res.rows[0];
+    return result;
   }
 }

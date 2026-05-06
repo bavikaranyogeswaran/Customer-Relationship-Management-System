@@ -1,4 +1,5 @@
-import { Controller, Request, Post, UseGuards, Body, Get, BadRequestException } from '@nestjs/common';
+import { Controller, Request, Post, UseGuards, Get, BadRequestException } from '@nestjs/common';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { LocalAuthGuard } from './local-auth.guard';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -7,21 +8,14 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(@Request() req) {
     return this.authService.login(req.user);
   }
 
-  @Post('register')
-  async register(@Body() body) {
-    try {
-      return await this.authService.register(body.email, body.password, body.name);
-    } catch (e) {
-      throw new BadRequestException(e.message);
-    }
-  }
-
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   getProfile(@Request() req) {

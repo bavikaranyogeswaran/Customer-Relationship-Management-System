@@ -29,9 +29,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const res = await api.get('/auth/profile');
           setUser(res.data);
-        } catch (err) {
+        } catch (err: any) {
           console.error('Failed to fetch profile', err);
-          logout();
+          if (err.response?.status === 401) {
+            logout();
+          }
         }
       }
       setLoading(false);

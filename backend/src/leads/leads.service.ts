@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
 
@@ -15,11 +15,16 @@ export class LeadsService {
     return res.rows[0];
   }
 
-  async findAll(query: any) {
-    const { status, source, assigned_to, search, page = 1, limit = 10 } = query;
+  async findAll(query: any, user: { id: string; role: string }) {
+    const { status, source, search, page = 1, limit = 10 } = query;
     let sql = `SELECT * FROM leads WHERE 1=1`;
     const params: any[] = [];
     let paramIndex = 1;
+
+    if (user.role !== 'admin') {
+      sql += ` AND assigned_to = $${paramIndex++}`;
+      params.push(user.id);
+    }
 
     if (status) {
       sql += ` AND status = $${paramIndex++}`;
@@ -29,14 +34,11 @@ export class LeadsService {
       sql += ` AND source = $${paramIndex++}`;
       params.push(source);
     }
-    if (assigned_to) {
-      sql += ` AND assigned_to = $${paramIndex++}`;
-      params.push(assigned_to);
-    }
     if (search) {
-      sql += ` AND (name ILIKE $${paramIndex} OR company ILIKE $${paramIndex} OR email ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
+      const escaped = search.replace(/[%_\\]/g, '\\$&');
+      sql += ` AND (name ILIKE $${paramIndex} OR company ILIKE $${paramIndex+1} OR email ILIKE $${paramIndex+2})`;
+      params.push(`%${escaped}%`, `%${escaped}%`, `%${escaped}%`);
+      paramIndex += 3;
     }
 
     // Count total for pagination
@@ -45,8 +47,8 @@ export class LeadsService {
 
     // Add pagination
     sql += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-    params.push(limit);
-    params.push((page - 1) * limit);
+    params.push(Number(limit));
+    params.push((Number(page) - 1) * Number(limit));
 
     const res = await this.pool.query(sql, params);
     return {
@@ -59,13 +61,19 @@ export class LeadsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user: { id: string; role: string }) {
     const res = await this.pool.query('SELECT * FROM leads WHERE id = $1', [id]);
     if (res.rows.length === 0) throw new NotFoundException('Lead not found');
-    return res.rows[0];
+    const lead = res.rows[0];
+    if (user.role !== 'admin' && lead.assigned_to !== user.id) {
+      throw new ForbiddenException('Access denied');
+    }
+    return lead;
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, data: any, user: { id: string; role: string }) {
+    await this.findOne(id, user); // Verify existence and ownership
+    
     // Dynamic update query
     const updates: string[] = [];
     const params: any[] = [];
@@ -78,7 +86,7 @@ export class LeadsService {
       }
     }
 
-    if (updates.length === 0) return this.findOne(id);
+    if (updates.length === 0) return this.findOne(id, user);
 
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
     params.push(id);
