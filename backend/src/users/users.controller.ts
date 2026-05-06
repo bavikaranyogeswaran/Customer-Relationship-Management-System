@@ -1,3 +1,10 @@
+// ==============================================================================
+// USERS CONTROLLER (User Administration)
+// ==============================================================================
+// Handles administrative requests for managing system users, roles, 
+// and internal registry operations.
+// ==============================================================================
+
 import { Controller, Post, Body, UseGuards, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -8,17 +15,24 @@ import * as bcrypt from 'bcrypt';
 
 @Controller('users')
 export class UsersController {
+  // CONSTRUCTOR: Injects UsersService to handle user persistence logic.
   constructor(private readonly usersService: UsersService) {}
 
+  // CREATE USER: Administrative endpoint for manually registering new system users.
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Post()
   async createUser(@Body() dto: CreateUserDto) {
+    // 1. [DB] Check if user already exists to prevent duplication
     const existing = await this.usersService.findByEmail(dto.email);
     if (existing) {
       throw new BadRequestException('User already exists');
     }
+    
+    // 2. [SECURITY] Hash password using bcrypt before storage
     const hash = await bcrypt.hash(dto.password, 10);
+    
+    // 3. [DB] Persist user record via service layer
     return this.usersService.adminCreate({
       email: dto.email,
       password_hash: hash,

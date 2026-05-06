@@ -1,3 +1,10 @@
+// ==============================================================================
+// APP MODULE (Central Orchestration)
+// ==============================================================================
+// Root module that orchestrates all feature modules, environment 
+// configurations, and global security guards.
+// ==============================================================================
+
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -14,6 +21,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
+    // 1. [PERFORMANCE] Configuration with validation schema to ensure environment integrity
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: Joi.object({
@@ -22,11 +30,13 @@ import { DashboardModule } from './dashboard/dashboard.module';
         PORT: Joi.number().default(3000),
       }),
     }),
+    // 2. [SECURITY] Implement rate limiting to prevent brute-force attacks and abuse
     ThrottlerModule.forRoot([{
       name: 'short',
       ttl: 60000,
       limit: 10,
     }]),
+    // 3. Import domain-specific modules
     DatabaseModule, 
     AuthModule, 
     UsersModule, 
@@ -36,7 +46,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
   ],
   controllers: [AppController],
   providers: [
+    // 4. Register core application services
     AppService,
+    // 5. [SECURITY] Register global ThrottlerGuard for automated rate limiting
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
