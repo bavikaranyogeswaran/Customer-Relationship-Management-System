@@ -43,11 +43,17 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
     e.preventDefault();
     setLoading(true);
     try {
+      // Strip empty/null assigned_to so the UUID validator is never triggered with a non-UUID
+      const payload = { ...formData };
+      if (!payload.assigned_to || payload.assigned_to === '') {
+        delete (payload as any).assigned_to;
+      }
+
       if (lead) {
-        await api.patch(`/leads/${lead.id}`, formData);
+        await api.patch(`/leads/${lead.id}`, payload);
         toast.success('Lead updated successfully');
       } else {
-        await api.post('/leads', formData);
+        await api.post('/leads', payload);
         toast.success('Lead created successfully');
       }
       onSuccess();
@@ -75,7 +81,13 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Phone</label>
-          <Input value={formData.phone} onChange={(e: any) => setFormData({...formData, phone: e.target.value})} />
+          <Input 
+            placeholder="0771234567" 
+            pattern="^(?:\+94|94|0)\d{9}$"
+            title="Please enter a valid Sri Lankan phone number (e.g. 0771234567 or +94771234567)"
+            value={formData.phone} 
+            onChange={(e: any) => setFormData({...formData, phone: e.target.value})} 
+          />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">

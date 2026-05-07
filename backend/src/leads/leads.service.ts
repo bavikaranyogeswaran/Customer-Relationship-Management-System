@@ -177,7 +177,7 @@ export class LeadsService {
     params.push(id);
     params.push(data.version || existing.version);
 
-    const sql = `UPDATE leads SET ${updates.join(', ')} WHERE id = $${paramIndex - 1} AND version = $${paramIndex} RETURNING *`;
+    const sql = `UPDATE leads SET ${updates.join(', ')} WHERE id = $${paramIndex++} AND version = $${paramIndex} RETURNING *`;
     
     const res = await this.pool.query(sql, params);
     if (res.rows.length === 0) throw new ForbiddenException('Concurrency conflict: Lead was updated by another user');

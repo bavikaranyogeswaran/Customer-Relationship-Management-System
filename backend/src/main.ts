@@ -5,6 +5,7 @@
 // Configures global middleware, CORS, validation pipes, and starts the server.
 // ==============================================================================
 
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
