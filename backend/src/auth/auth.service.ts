@@ -9,6 +9,7 @@ import { Injectable, UnauthorizedException, HttpException, HttpStatus } from '@n
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -18,6 +19,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
 
   // VALIDATE USER: Checks if the provided email and password match a database record.
@@ -107,13 +109,9 @@ export class AuthService {
       }
     );
 
-    // MOCK EMAIL SENDING
+    // REAL EMAIL SENDING
     const resetLink = `${this.configService.get<string>('FRONTEND_URL')}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
-    console.log('\n======================================================');
-    console.log('MOCK EMAIL: Password Reset Request');
-    console.log(`To: ${email}`);
-    console.log(`Link: ${resetLink}`);
-    console.log('======================================================\n');
+    await this.mailService.sendPasswordReset(email, resetLink);
 
     return { message: 'If an account exists with that email, a reset link has been sent.' };
   }

@@ -10,23 +10,19 @@ const pool = new Pool({
 });
 
 async function runMigrations() {
-  const migrationsDir = path.join(__dirname, '../migrations');
-  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+  const schemaPath = path.join(__dirname, '../src/database/schema.sql');
+  const sql = fs.readFileSync(schemaPath, 'utf8');
 
-  for (const file of files) {
-    console.log(`Running migration: ${file}`);
-    const filePath = path.join(migrationsDir, file);
-    const sql = fs.readFileSync(filePath, 'utf8');
-    try {
-      await pool.query(sql);
-      console.log(`Successfully applied: ${file}`);
-    } catch (err) {
-      console.error(`Error applying migration ${file}:`, err);
-      process.exit(1);
-    }
+  try {
+    console.log('Applying schema from src/database/schema.sql...');
+    await pool.query(sql);
+    console.log('Schema applied successfully.');
+  } catch (err) {
+    console.error('Error applying schema:', err);
+    process.exit(1);
   }
-  
-  console.log('All migrations applied successfully.');
+
+  console.log('Database is up to date.');
   process.exit(0);
 }
 
