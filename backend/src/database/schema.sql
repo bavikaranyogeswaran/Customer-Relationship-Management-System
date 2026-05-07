@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS leads (
     source      VARCHAR(100),
     status      VARCHAR(50) NOT NULL DEFAULT 'New',
     deal_value  DECIMAL(12, 2) DEFAULT 0,
+    won_value   DECIMAL(12, 2) DEFAULT 0,
     assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
     created_by  UUID REFERENCES users(id) ON DELETE SET NULL,
     deleted_at  TIMESTAMP WITH TIME ZONE,
@@ -57,6 +58,18 @@ CREATE TABLE IF NOT EXISTS notes (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 -- ==============================================================================
+-- SESSIONS TABLE (Token Revocation & Management)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS sessions (
+    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash);
+-- ==============================================================================
 -- INDEXES (Performance Optimization)
 -- ==============================================================================
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
@@ -65,3 +78,4 @@ CREATE INDEX IF NOT EXISTS idx_leads_assigned_to ON leads(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_leads_deleted_at ON leads(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_notes_lead_id ON notes(lead_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_email_active_unique ON leads(email) WHERE deleted_at IS NULL;

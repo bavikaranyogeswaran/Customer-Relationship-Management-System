@@ -47,7 +47,7 @@ export class DashboardService {
         COUNT(*) FILTER (WHERE status = 'Won') as won_leads,
         COUNT(*) FILTER (WHERE status = 'Lost') as lost_leads,
         SUM(deal_value) as total_deal_value,
-        SUM(deal_value) FILTER (WHERE status = 'Won') as total_won_value,
+        SUM(COALESCE(won_value, 0)) FILTER (WHERE status = 'Won') as total_won_value,
         COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') as leads_this_week
       FROM leads
       ${whereClause}

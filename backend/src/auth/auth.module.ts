@@ -15,13 +15,16 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LocalStrategy } from './local.strategy';
 import { JwtStrategy } from './jwt.strategy';
 import { RolesGuard } from './guards/roles.guard';
+import { DatabaseModule } from '../database/database.module';
 import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
-    // 1. Integrate UsersModule for credential verification against database
+    // 1. Integrate DatabaseModule for session persistence
+    DatabaseModule,
+    // 2. Integrate UsersModule for credential verification against database
     UsersModule,
-    // 2. Integrate MailModule for sending emails
+    // 3. Integrate MailModule for sending emails
     MailModule,
     // 3. Register Passport for strategy-based authentication
     PassportModule,

@@ -44,9 +44,11 @@ export class AuthController {
     return { access_token, user };
   }
 
-  // LOGOUT: Clears the secure refresh token cookie.
+  // LOGOUT: Clears the secure refresh token cookie and invalidates session in DB.
   @Post('logout')
-  async logout(@Response({ passthrough: true }) res: Res) {
+  async logout(@Request() req, @Response({ passthrough: true }) res: Res) {
+    const refreshToken = req.cookies?.refresh_token;
+    await this.authService.logout(refreshToken);
     res.clearCookie('refresh_token');
     return { message: 'Logged out successfully' };
   }

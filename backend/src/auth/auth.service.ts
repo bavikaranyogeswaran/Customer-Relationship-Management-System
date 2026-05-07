@@ -11,6 +11,10 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
+import { Pool } from 'pg';
+import { PG_POOL } from '../database/database.module';
+import { Inject } from '@nestjs/common';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +24,13 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private mailService: MailService,
+    @Inject(PG_POOL) private pool: Pool,
   ) {}
+
+  // HASH TOKEN: Utility to hash tokens before DB storage
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
 
   // VALIDATE USER: Checks if the provided email and password match a database record.
   async validateUser(email: string, pass: string): Promise<any> {
@@ -66,6 +76,12 @@ export class AuthService {
       }
     );
 
+    // 1. [SECURITY] Store refresh token hash in sessions table
+    await this.pool.query(
+      'INSERT INTO sessions (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
+      [user.id, this.hashToken(refreshToken), new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)]
+    );
+
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
@@ -80,6 +96,13 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
       
+      // 1. [SECURITY] Verify session exists in DB
+      const sessionRes = await this.pool.query(
+        'SELECT id FROM sessions WHERE token_hash = $1 AND user_id = $2 AND expires_at > NOW()',
+        [this.hashToken(refreshToken), payload.sub]
+      );
+      if (sessionRes.rows.length === 0) throw new UnauthorizedException('Session expired or revoked');
+
       const user = await this.usersService.findById(payload.sub);
       if (!user || user.is_active === false) throw new UnauthorizedException('Invalid or deactivated account');
 
@@ -90,6 +113,13 @@ export class AuthService {
       };
     } catch (e) {
       throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  // LOGOUT: Invalidates a specific refresh token session
+  async logout(refreshToken: string) {
+    if (refreshToken) {
+      await this.pool.query('DELETE FROM sessions WHERE token_hash = $1', [this.hashToken(refreshToken)]);
     }
   }
 

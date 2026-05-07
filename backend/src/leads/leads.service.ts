@@ -24,9 +24,20 @@ export class LeadsService {
 
     // 2. [DB] Insert new lead record
     const res = await this.pool.query(
-      `INSERT INTO leads (name, company, email, phone, source, status, deal_value, assigned_to, created_by) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [data.name, data.company, data.email, data.phone, data.source, data.status || 'New', data.deal_value || 0, data.assigned_to || userId, userId]
+      `INSERT INTO leads (name, company, email, phone, source, status, deal_value, won_value, assigned_to, created_by) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [
+        data.name, 
+        data.company, 
+        data.email, 
+        data.phone, 
+        data.source, 
+        data.status || 'New', 
+        data.deal_value || 0, 
+        (data.status === 'Won' ? (data.deal_value || 0) : 0),
+        data.assigned_to || userId, 
+        userId
+      ]
     );
     return res.rows[0];
   }
@@ -157,6 +168,12 @@ export class LeadsService {
     // 4. [DB] Execute update with Version Check (Optimistic Locking)
     updates.push(`version = version + 1`);
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    
+    // 5. [FINANCIAL] Snapshot deal value on "Won" transition
+    if (newStatus === 'Won') {
+      updates.push(`won_value = deal_value`);
+    }
+
     params.push(id);
     params.push(data.version || existing.version);
 

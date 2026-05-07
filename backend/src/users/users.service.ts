@@ -102,6 +102,21 @@ export class UsersService {
       values.push(updateData.is_active);
     }
 
+    // 1. [SECURITY] Safeguard: Prevent deactivating or demoting the last active admin
+    if (updateData.role === 'user' || updateData.is_active === false) {
+      const user = await this.findById(id);
+      if (user && user.role === 'admin' && user.is_active === true) {
+        const adminCountRes = await this.pool.query(
+          "SELECT COUNT(*) FROM users WHERE role = 'admin' AND is_active = true"
+        );
+        const adminCount = parseInt(adminCountRes.rows[0].count, 10);
+        
+        if (adminCount <= 1) {
+          throw new Error('Forbidden: Cannot deactivate or demote the last remaining active administrator.');
+        }
+      }
+    }
+
     if (updates.length === 0) return this.findById(id);
 
     values.push(id);
