@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import LeadForm from '../components/LeadForm';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -21,10 +22,29 @@ export default function Leads() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [source, setSource] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<any>(null);
   const [meta, setMeta] = useState({ page: 1, last_page: 1, total: 0 });
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+
+  // Fetch users list for the salesperson filter (admin only)
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (currentUser?.role === 'admin') {
+        try {
+          const res = await api.get('/users');
+          setUsers(res.data);
+        } catch (err) {
+          console.error('Failed to fetch users for filter');
+        }
+      }
+    };
+    fetchUsers();
+  }, [currentUser]);
 
   const fetchLeads = async () => {
     setLoading(true);
@@ -32,7 +52,9 @@ export default function Leads() {
       const res = await api.get('/leads', {
         params: {
           search,
-          status: status === 'All' ? '' : status,
+          status: status || undefined,
+          source: source || undefined,
+          assigned_to: assignedTo || undefined,
           page: meta.page,
         }
       });
@@ -47,7 +69,7 @@ export default function Leads() {
 
   useEffect(() => {
     fetchLeads();
-  }, [search, status, meta.page]);
+  }, [search, status, source, assignedTo, meta.page]);
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this lead?')) {
@@ -120,6 +142,30 @@ export default function Leads() {
           <option value="Won">Won</option>
           <option value="Lost">Lost</option>
         </select>
+        <select 
+          className="h-10 px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
+          value={source}
+          onChange={(e: any) => { setSource(e.target.value); setMeta(m => ({...m, page: 1}))}}
+        >
+          <option value="">All Sources</option>
+          <option value="Website">Website</option>
+          <option value="Referral">Referral</option>
+          <option value="LinkedIn">LinkedIn</option>
+          <option value="Cold Email">Cold Email</option>
+          <option value="Event">Event</option>
+        </select>
+        {currentUser?.role === 'admin' && (
+          <select 
+            className="h-10 px-3 py-2 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
+            value={assignedTo}
+            onChange={(e: any) => { setAssignedTo(e.target.value); setMeta(m => ({...m, page: 1}))}}
+          >
+            <option value="">All Salespersons</option>
+            {users.map(u => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

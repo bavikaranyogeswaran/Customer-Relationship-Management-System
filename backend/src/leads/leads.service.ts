@@ -54,6 +54,12 @@ export class LeadsService {
       sql += ` AND source = $${paramIndex++}`;
       params.push(source);
     }
+
+    // 3b. [DB] Filter by assigned salesperson (admin-only explicit filter)
+    if (query.assigned_to && query.assigned_to !== '') {
+      sql += ` AND assigned_to = $${paramIndex++}`;
+      params.push(query.assigned_to);
+    }
     
     // 4. [PERFORMANCE] Apply full-text search across multiple fields
     if (search) {
