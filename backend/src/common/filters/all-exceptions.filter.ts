@@ -17,29 +17,47 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status =
+    let status =
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const message =
+    let message =
       exception instanceof HttpException
-        ? exception.getResponse()
+        ? (exception.getResponse() as any).message || exception.getResponse()
         : 'Internal server error';
 
-    // 1. [LOGGING] Capture detailed error info for internal debugging
+    // 1. [DB] Map raw Postgres errors to clean HTTP responses
+    const pgError = exception as any;
+    if (pgError.code) {
+      switch (pgError.code) {
+        case '23505': // Unique violation
+          status = HttpStatus.CONFLICT;
+          message = `Resource already exists: ${pgError.detail || 'Duplicate entry'}`;
+          break;
+        case '23503': // Foreign key violation
+          status = HttpStatus.BAD_REQUEST;
+          message = `Referenced resource not found: ${pgError.detail || 'Constraint violation'}`;
+          break;
+        case '22P02': // Invalid input syntax
+          status = HttpStatus.BAD_REQUEST;
+          message = 'Invalid data format provided';
+          break;
+      }
+    }
+
+    // 2. [LOGGING] Capture detailed error info for internal debugging
     this.logger.error(
-      `HTTP Status: ${status} Error: ${JSON.stringify(exception)}`,
+      `[${request.method}] ${request.url} | Status: ${status} | Error: ${typeof message === 'string' ? message : JSON.stringify(message)}`,
       (exception as any).stack,
     );
 
-    // 2. [SECURITY] Sanitize response: Only return the status and message
-    // Prevents leaking raw SQL errors or internal stack traces to the client
+    // 3. [SECURITY] Sanitize response: Only return the status and message
     response.status(status).json({
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
-      message: typeof message === 'string' ? message : (message as any).message || 'Internal server error',
+      message: message,
     });
   }
 }

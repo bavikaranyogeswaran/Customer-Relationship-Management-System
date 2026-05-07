@@ -56,3 +56,12 @@ CREATE TABLE IF NOT EXISTS notes (
     updated_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+-- ==============================================================================
+-- INDEXES (Performance Optimization)
+-- ==============================================================================
+CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
+CREATE INDEX IF NOT EXISTS idx_leads_source ON leads(source);
+CREATE INDEX IF NOT EXISTS idx_leads_assigned_to ON leads(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_leads_deleted_at ON leads(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_notes_lead_id ON notes(lead_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
