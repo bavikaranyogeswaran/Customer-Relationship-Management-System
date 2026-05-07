@@ -131,6 +131,11 @@ export class AuthService {
       return { message: 'If an account exists with that email, a reset link has been sent.' };
     }
 
+    // 1. [SECURITY] Honor account lockouts for password reset flow
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      throw new HttpException('Account is temporarily locked. Please wait for the lockout to expire before resetting.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     const resetToken = this.jwtService.sign(
       { sub: user.id, purpose: 'reset-password' },
       { 
@@ -160,6 +165,10 @@ export class AuthService {
 
       const hash = await bcrypt.hash(newPassword, 10);
       await this.usersService.updatePassword(user.id, hash);
+
+      // 1. [SECURITY] Invalidate all active sessions for this user globally
+      await this.pool.query('DELETE FROM sessions WHERE user_id = $1', [user.id]);
+
       return { message: 'Password has been successfully reset' };
     } catch (e) {
       throw new UnauthorizedException('Invalid or expired reset token');

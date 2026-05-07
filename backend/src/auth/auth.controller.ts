@@ -63,7 +63,8 @@ export class AuthController {
     return req.user;
   }
 
-  // FORGOT PASSWORD: Initiates password reset flow.
+  // FORGOT PASSWORD: Initiates password reset flow with strict throttling to prevent abuse.
+  @Throttle({ default: { limit: 3, ttl: 3600000 } })
   @Post('forgot-password')
   async forgotPassword(@Body('email') email: string) {
     return this.authService.generatePasswordResetToken(email);
