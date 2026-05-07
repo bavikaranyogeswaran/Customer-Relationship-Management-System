@@ -18,6 +18,10 @@ export default function Layout() {
     { to: '/leads', icon: <Users className="w-5 h-5" />, label: 'Leads' },
   ];
 
+  if (user?.role === 'admin') {
+    navLinks.push({ to: '/users', icon: <Users className="w-5 h-5 text-purple-600" />, label: 'Team Setup' });
+  }
+
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900">
       {/* Mobile sidebar overlay */}

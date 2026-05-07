@@ -24,7 +24,10 @@ export class AuthService {
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
     
-    // 1. [SECURITY] Check if account is currently locked
+    // 1. [SECURITY] Check if account is currently locked or deactivated
+    if (user && user.is_active === false) {
+      throw new UnauthorizedException('Account has been deactivated.');
+    }
     if (user && user.locked_until && new Date(user.locked_until) > new Date()) {
       throw new HttpException('Account is temporarily locked. Please try again later.', HttpStatus.TOO_MANY_REQUESTS);
     }
@@ -76,7 +79,7 @@ export class AuthService {
       });
       
       const user = await this.usersService.findById(payload.sub);
-      if (!user) throw new UnauthorizedException();
+      if (!user || user.is_active === false) throw new UnauthorizedException('Invalid or deactivated account');
 
       const newPayload = { email: user.email, sub: user.id, name: user.name, role: user.role };
       return {
@@ -85,6 +88,53 @@ export class AuthService {
       };
     } catch (e) {
       throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  // FORGOT PASSWORD: Generates a temporary token for password resets
+  async generatePasswordResetToken(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user || user.is_active === false) {
+      // Return a successful response even if user doesn't exist to prevent email enumeration
+      return { message: 'If an account exists with that email, a reset link has been sent.' };
+    }
+
+    const resetToken = this.jwtService.sign(
+      { sub: user.id, purpose: 'reset-password' },
+      { 
+        secret: this.configService.get<string>('JWT_SECRET') + user.password_hash,
+        expiresIn: '15m' 
+      }
+    );
+
+    // MOCK EMAIL SENDING
+    const resetLink = `${this.configService.get<string>('FRONTEND_URL')}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    console.log('\n======================================================');
+    console.log('MOCK EMAIL: Password Reset Request');
+    console.log(`To: ${email}`);
+    console.log(`Link: ${resetLink}`);
+    console.log('======================================================\n');
+
+    return { message: 'If an account exists with that email, a reset link has been sent.' };
+  }
+
+  // RESET PASSWORD: Validates token and updates password
+  async resetPassword(email: string, token: string, newPassword: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user || user.is_active === false) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+
+    try {
+      this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_SECRET') + user.password_hash,
+      });
+
+      const hash = await bcrypt.hash(newPassword, 10);
+      await this.usersService.updatePassword(user.id, hash);
+      return { message: 'Password has been successfully reset' };
+    } catch (e) {
+      throw new UnauthorizedException('Invalid or expired reset token');
     }
   }
 

@@ -5,7 +5,7 @@
 // and protected profile retrieval.
 // ==============================================================================
 
-import { Controller, Request, Post, UseGuards, Get, Response, UnauthorizedException } from '@nestjs/common';
+import { Controller, Request, Post, UseGuards, Get, Response, UnauthorizedException, Body } from '@nestjs/common';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { LocalAuthGuard } from './local-auth.guard';
 import { AuthService } from './auth.service';
@@ -59,5 +59,17 @@ export class AuthController {
     // 1. [SECURITY] Verify JWT validity (handled by Guard)
     // 2. Return user information extracted from token payload
     return req.user;
+  }
+
+  // FORGOT PASSWORD: Initiates password reset flow.
+  @Post('forgot-password')
+  async forgotPassword(@Body('email') email: string) {
+    return this.authService.generatePasswordResetToken(email);
+  }
+
+  // RESET PASSWORD: Completes password reset flow.
+  @Post('reset-password')
+  async resetPassword(@Body() body: any) {
+    return this.authService.resetPassword(body.email, body.token, body.password);
   }
 }

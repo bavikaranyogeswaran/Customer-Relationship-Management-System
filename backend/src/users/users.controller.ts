@@ -5,7 +5,7 @@
 // and internal registry operations.
 // ==============================================================================
 
-import { Controller, Post, Get, Body, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Param, Body, UseGuards, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -47,5 +47,13 @@ export class UsersController {
       name: dto.name,
       role: dto.role,
     });
+  }
+
+  // UPDATE USER: Administrative endpoint for updating roles or deactivating users.
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Patch(':id')
+  async updateUser(@Param('id') id: string, @Body() updateData: { role?: string; is_active?: boolean }) {
+    return this.usersService.updateUser(id, updateData);
   }
 }

@@ -18,7 +18,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<any> {
     // 1. [DB] Execute query to find user by email with column sanitization
     const res = await this.pool.query(
-      'SELECT id, email, password_hash, name, role, failed_login_attempts, locked_until, created_at FROM users WHERE email = $1', 
+      'SELECT id, email, password_hash, name, role, is_active, failed_login_attempts, locked_until, created_at FROM users WHERE email = $1', 
       [email]
     );
     return res.rows[0];
@@ -28,7 +28,7 @@ export class UsersService {
   async findById(id: string): Promise<any> {
     // 1. [DB] Execute query to find user by primary key with column sanitization
     const res = await this.pool.query(
-      'SELECT id, email, name, role, failed_login_attempts, locked_until, created_at FROM users WHERE id = $1', 
+      'SELECT id, email, name, role, is_active, failed_login_attempts, locked_until, created_at FROM users WHERE id = $1', 
       [id]
     );
     return res.rows[0];
@@ -82,7 +82,37 @@ export class UsersService {
 
   // FIND ALL: Retrieves a list of all users for administrative purposes (e.g., lead assignment).
   async findAll(): Promise<any[]> {
-    const res = await this.pool.query('SELECT id, name, email, role FROM users ORDER BY name ASC');
+    const res = await this.pool.query('SELECT id, name, email, role, is_active FROM users ORDER BY name ASC');
     return res.rows;
+  }
+
+  // UPDATE USER: Administrative endpoint for modifying user role and active status.
+  async updateUser(id: string, updateData: { role?: string; is_active?: boolean }): Promise<any> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (updateData.role !== undefined) {
+      updates.push(`role = $${paramIndex++}`);
+      values.push(updateData.role);
+    }
+    
+    if (updateData.is_active !== undefined) {
+      updates.push(`is_active = $${paramIndex++}`);
+      values.push(updateData.is_active);
+    }
+
+    if (updates.length === 0) return this.findById(id);
+
+    values.push(id);
+    const query = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING id, email, name, role, is_active`;
+    
+    const res = await this.pool.query(query, values);
+    return res.rows[0];
+  }
+
+  // UPDATE PASSWORD: Used for password reset flows.
+  async updatePassword(id: string, passwordHash: string): Promise<void> {
+    await this.pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, id]);
   }
 }

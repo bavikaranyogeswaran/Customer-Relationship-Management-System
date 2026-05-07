@@ -1,30 +1,27 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import api from '../lib/axios';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
+import api from '@/lib/axios';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 
-export default function Login() {
+export default function ForgotPassword() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     setLoading(true);
 
     try {
-      const res = await api.post('/auth/login', { email, password });
-      login(res.data.access_token, res.data.user);
-      navigate('/');
+      const res = await api.post('/auth/forgot-password', { email });
+      setMessage(res.data.message);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Authentication failed. Please try again.');
+      setError('Failed to process request. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -38,14 +35,13 @@ export default function Login() {
             <span className="text-3xl font-bold">C</span>
           </div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">CRM Pro</h1>
-          <p className="text-slate-500 mt-2">Manage your leads like a professional</p>
         </div>
 
         <Card className="border-0 shadow-2xl shadow-slate-200/50 backdrop-blur-sm bg-white/80">
           <CardHeader>
-            <CardTitle className="text-2xl">Welcome back</CardTitle>
+            <CardTitle className="text-2xl">Reset Password</CardTitle>
             <CardDescription>
-              Enter your details to access your account
+              Enter your email to receive a password reset link.
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -55,38 +51,31 @@ export default function Login() {
                   {error}
                 </div>
               )}
+              {message && (
+                <div className="p-3 text-sm text-green-700 bg-green-50 border border-green-100 rounded-lg">
+                  {message}
+                </div>
+              )}
               
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">Email address</label>
                 <Input 
                   required 
                   type="email" 
-                  placeholder="admin@crm.com" 
+                  placeholder="name@example.com" 
                   value={email} 
                   onChange={(e: any) => setEmail(e.target.value)} 
                   className="bg-white"
                 />
               </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-slate-700">Password</label>
-                  <Link to="/forgot-password" title="Recover your password" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Forgot password?</Link>
-                </div>
-                <Input 
-                  required 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={password} 
-                  onChange={(e: any) => setPassword(e.target.value)} 
-                  className="bg-white"
-                />
-              </div>
             </CardContent>
             <CardFooter className="flex-col gap-4">
-              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 h-11 text-base font-medium shadow-md shadow-indigo-600/10" disabled={loading}>
-                {loading ? 'Please wait...' : 'Sign in'}
+              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 h-11 text-base font-medium shadow-md shadow-indigo-600/10" disabled={loading || !!message}>
+                {loading ? 'Please wait...' : 'Send Reset Link'}
               </Button>
+              <div className="text-sm text-center text-slate-500">
+                Remember your password? <Link to="/login" className="text-indigo-600 hover:underline">Log in</Link>
+              </div>
             </CardFooter>
           </form>
         </Card>

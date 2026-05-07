@@ -115,7 +115,28 @@ export class LeadsService {
       if (targetUser.rows.length === 0) throw new BadRequestException('Target user does not exist');
     }
 
-    // 3. [VALIDATION] Build dynamic SET clause
+    // 3. [VALIDATION] Enforce State Machine for Status
+    let statusChanged = false;
+    let oldStatus = existing.status;
+    let newStatus = data.status;
+
+    if (newStatus && newStatus !== oldStatus) {
+      const validTransitions: Record<string, string[]> = {
+        'New': ['Contacted', 'Lost'],
+        'Contacted': ['Qualified', 'Lost'],
+        'Qualified': ['Proposal Sent', 'Lost'],
+        'Proposal Sent': ['Won', 'Lost'],
+        'Won': [],
+        'Lost': [],
+      };
+
+      if (!validTransitions[oldStatus]?.includes(newStatus)) {
+        throw new BadRequestException(`Invalid status transition from ${oldStatus} to ${newStatus}`);
+      }
+      statusChanged = true;
+    }
+
+    // 4. [VALIDATION] Build dynamic SET clause
     const updates: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
@@ -139,6 +160,15 @@ export class LeadsService {
     
     const res = await this.pool.query(sql, params);
     if (res.rows.length === 0) throw new ForbiddenException('Concurrency conflict: Lead was updated by another user');
+    
+    // 6. [AUDIT] Log status change in activity timeline
+    if (statusChanged) {
+      await this.pool.query(
+        'INSERT INTO notes (content, lead_id, author_id) VALUES ($1, $2, $3)',
+        [`System Note: Status changed from ${oldStatus} to ${newStatus}`, id, user.id]
+      );
+    }
+
     return res.rows[0];
   }
 

@@ -175,11 +175,28 @@ export default function LeadDetails() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost'].map((s) => (
-                <DropdownMenuItem key={s} onClick={() => handleStatusChange(s)}>
-                  <Badge variant="outline" className={`${getStatusColor(s)} border-0 px-0`}>{s}</Badge>
-                </DropdownMenuItem>
-              ))}
+              {['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost'].map((s) => {
+                const validTransitions: Record<string, string[]> = {
+                  'New': ['Contacted', 'Lost'],
+                  'Contacted': ['Qualified', 'Lost'],
+                  'Qualified': ['Proposal Sent', 'Lost'],
+                  'Proposal Sent': ['Won', 'Lost'],
+                  'Won': [],
+                  'Lost': [],
+                };
+                const isAllowed = validTransitions[lead.status]?.includes(s) || s === lead.status;
+                
+                return (
+                  <DropdownMenuItem 
+                    key={s} 
+                    disabled={!isAllowed || s === lead.status}
+                    onClick={() => handleStatusChange(s)}
+                  >
+                    <Badge variant="outline" className={`${getStatusColor(s)} border-0 px-0 ${!isAllowed ? 'opacity-30' : ''}`}>{s}</Badge>
+                    {s === lead.status && <Check className="ml-auto w-4 h-4 text-slate-400" />}
+                  </DropdownMenuItem>
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -253,46 +270,53 @@ export default function LeadDetails() {
                   <div className="text-center py-8 text-slate-500 text-sm">No notes yet. Add one below!</div>
                 ) : (
                   <>
-                    {notes.map((note) => (
-                      <div key={note.id} className={`bg-slate-50 p-4 rounded-lg border border-slate-100 group ${note.isOptimistic ? 'opacity-50' : ''}`}>
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-800 text-sm">{note.author_name}</span>
-                            <span className="text-[10px] text-slate-400 uppercase">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
-                          </div>
-                          {!note.isOptimistic && (
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditingNoteId(note.id); setEditNoteContent(note.content); }}>
-                                <Edit2 className="h-3 w-3" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:bg-red-50" onClick={() => handleDeleteNote(note.id)}>
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                    {notes.map((note) => {
+                      const isSystemNote = note.content.startsWith('System Note:');
+                      return (
+                        <div key={note.id} className={`${isSystemNote ? 'bg-indigo-50/50 border-indigo-100' : 'bg-slate-50 border-slate-100'} p-4 rounded-lg border group ${note.isOptimistic ? 'opacity-50' : ''}`}>
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex flex-col">
+                              <span className={`font-medium text-sm ${isSystemNote ? 'text-indigo-700' : 'text-slate-800'}`}>
+                                {isSystemNote ? 'System Audit' : note.author_name}
+                              </span>
+                              <span className="text-[10px] text-slate-400 uppercase">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
                             </div>
+                            {!note.isOptimistic && !isSystemNote && (
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditingNoteId(note.id); setEditNoteContent(note.content); }}>
+                                  <Edit2 className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:bg-red-50" onClick={() => handleDeleteNote(note.id)}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          {editingNoteId === note.id ? (
+                            <div className="space-y-2 mt-2">
+                              <Input 
+                                value={editNoteContent}
+                                onChange={(e: any) => setEditNoteContent(e.target.value)}
+                                className="text-sm bg-white"
+                                autoFocus
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setEditingNoteId(null)}>
+                                  <CloseIcon className="h-3 w-3 mr-1" /> Cancel
+                                </Button>
+                                <Button size="sm" className="h-7 px-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => handleUpdateNote(note.id)}>
+                                  <Check className="h-3 w-3 mr-1" /> Save
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className={`text-sm whitespace-pre-wrap ${isSystemNote ? 'text-indigo-600 italic font-medium' : 'text-slate-700'}`}>
+                              {note.content}
+                            </p>
                           )}
                         </div>
-                        {editingNoteId === note.id ? (
-                          <div className="space-y-2 mt-2">
-                            <Input 
-                              value={editNoteContent}
-                              onChange={(e: any) => setEditNoteContent(e.target.value)}
-                              className="text-sm bg-white"
-                              autoFocus
-                            />
-                            <div className="flex gap-2 justify-end">
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setEditingNoteId(null)}>
-                                <CloseIcon className="h-3 w-3 mr-1" /> Cancel
-                              </Button>
-                              <Button size="sm" className="h-7 px-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => handleUpdateNote(note.id)}>
-                                <Check className="h-3 w-3 mr-1" /> Save
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{note.content}</p>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                     {notesMeta.page < notesMeta.last_page && (
                       <div className="flex justify-center pt-4">
                         <Button 

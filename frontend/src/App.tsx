@@ -3,7 +3,10 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Leads from './pages/Leads';
+import Users from './pages/Users';
 import Dashboard from './pages/Dashboard';
 import LeadDetails from './pages/LeadDetails';
 import { Toaster } from './components/ui/sonner';
@@ -14,12 +17,15 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/leads" element={<Leads />} />
               <Route path="/leads/:id" element={<LeadDetails />} />
+              <Route path="/users" element={<Users />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Route>
