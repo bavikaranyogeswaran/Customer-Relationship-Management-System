@@ -25,6 +25,7 @@ export const PG_POOL = 'PG_POOL';
       useFactory: () => {
         const pool = new Pool({
           connectionString: process.env.DATABASE_URL,
+          options: '-c timezone=Asia/Colombo',
         });
         
         // [STABILITY] Handle unexpected pool errors (e.g. idle client connectivity loss)

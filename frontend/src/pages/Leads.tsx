@@ -208,7 +208,7 @@ export default function Leads() {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium text-slate-900">
-                    ${Number(lead.deal_value).toLocaleString()}
+                    LKR {Number(lead.deal_value).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-slate-500">
                     <div className="text-sm">{format(new Date(lead.created_at), 'MMM d, yyyy')}</div>

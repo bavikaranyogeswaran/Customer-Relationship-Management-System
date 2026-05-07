@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Trash2, Edit2, Check, X as CloseIcon } from 'lucide-react';
+import { Trash2, Edit2, Check, X as CloseIcon, MessageSquare, PhoneCall, Mail as MailIcon, Users } from 'lucide-react';
 
 export default function LeadDetails() {
   const { id } = useParams();
@@ -24,6 +24,7 @@ export default function LeadDetails() {
   const [lead, setLead] = useState<any>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
+  const [newNoteType, setNewNoteType] = useState('Note');
   const [loading, setLoading] = useState(true);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editNoteContent, setEditNoteContent] = useState('');
@@ -81,8 +82,12 @@ export default function LeadDetails() {
     setNewNote('');
 
     try {
-      await api.post(`/leads/${id}/notes`, { content: tempNote.content });
-      toast.success('Note added');
+      await api.post(`/leads/${id}/notes`, { 
+        content: tempNote.content,
+        type: newNoteType 
+      });
+      toast.success('Activity logged');
+      setNewNoteType('Note'); // Reset to default
       // Refresh to get official ID and order
       const notesRes = await api.get(`/leads/${id}/notes`, { params: { page: 1, limit: 10 } });
       setNotes(notesRes.data.data);
@@ -104,15 +109,23 @@ export default function LeadDetails() {
     }
   };
 
-  const handleUpdateNote = async (noteId: string) => {
+  const handleUpdateNote = async (noteId: string, version: number) => {
     if (!editNoteContent.trim()) return;
     try {
-      await api.patch(`/leads/${id}/notes/${noteId}`, { content: editNoteContent });
+      await api.patch(`/leads/${id}/notes/${noteId}`, { 
+        content: editNoteContent,
+        version
+      });
       setEditingNoteId(null);
       toast.success('Note updated');
       fetchLeadDetails();
-    } catch (err) {
-      toast.error('Failed to update note');
+      fetchNotes(1);
+    } catch (err: any) {
+      if (err.response?.status === 409 || err.response?.data?.message?.includes('Conflict')) {
+        toast.error('Conflict: The note was modified elsewhere. Please refresh.');
+      } else {
+        toast.error('Failed to update note');
+      }
     }
   };
 
@@ -131,6 +144,15 @@ export default function LeadDetails() {
       }
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const getActivityIcon = (type: string) => {
+    switch(type) {
+      case 'Call': return <PhoneCall className="w-4 h-4 text-green-600" />;
+      case 'Email': return <MailIcon className="w-4 h-4 text-blue-600" />;
+      case 'Meeting': return <Users className="w-4 h-4 text-purple-600" />;
+      default: return <MessageSquare className="w-4 h-4 text-slate-400" />;
     }
   };
 
@@ -263,22 +285,30 @@ export default function LeadDetails() {
                       return (
                         <div key={note.id} className={`${isSystemNote ? 'bg-indigo-50/50 border-indigo-100' : 'bg-slate-50 border-slate-100'} p-4 rounded-lg border group ${note.isOptimistic ? 'opacity-50' : ''}`}>
                           <div className="flex justify-between items-start mb-2">
-                            <div className="flex flex-col">
-                              <span className={`font-medium text-sm ${isSystemNote ? 'text-indigo-700' : 'text-slate-800'}`}>
-                                {isSystemNote ? 'System Audit' : note.author_name}
-                              </span>
-                              <span className="text-[10px] text-slate-400 uppercase">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
-                            </div>
-                            {!note.isOptimistic && !isSystemNote && (
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditingNoteId(note.id); setEditNoteContent(note.content); }}>
-                                  <Edit2 className="h-3 w-3" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:bg-red-50" onClick={() => handleDeleteNote(note.id)}>
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                  {getActivityIcon(note.type)}
+                                  <span className={`font-medium text-sm ${isSystemNote ? 'text-indigo-700' : 'text-slate-800'}`}>
+                                    {isSystemNote ? 'System Audit' : note.author_name}
+                                  </span>
+                                  {!isSystemNote && (
+                                    <Badge variant="outline" className="text-[10px] h-4 py-0 font-normal border-slate-200 text-slate-500">
+                                      {note.type || 'Note'}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-slate-400 uppercase">{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
                               </div>
-                            )}
+                              {!note.isOptimistic && !isSystemNote && currentUser?.role === 'admin' && (
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditingNoteId(note.id); setEditNoteContent(note.content); }}>
+                                    <Edit2 className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:bg-red-50" onClick={() => handleDeleteNote(note.id)}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
                           </div>
                           {editingNoteId === note.id ? (
                             <div className="space-y-2 mt-2">
@@ -292,7 +322,7 @@ export default function LeadDetails() {
                                 <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setEditingNoteId(null)}>
                                   <CloseIcon className="h-3 w-3 mr-1" /> Cancel
                                 </Button>
-                                <Button size="sm" className="h-7 px-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => handleUpdateNote(note.id)}>
+                                <Button size="sm" className="h-7 px-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => handleUpdateNote(note.id, note.version)}>
                                   <Check className="h-3 w-3 mr-1" /> Save
                                 </Button>
                               </div>
@@ -322,17 +352,34 @@ export default function LeadDetails() {
                 )}
               </div>
               
-              <form onSubmit={handleAddNote} className="flex gap-2 mt-auto pt-4 border-t border-slate-100">
-                <Input 
-                  value={newNote}
-                  onChange={(e: any) => setNewNote(e.target.value)}
-                  placeholder="Add a note about this lead..."
-                  className="flex-1"
-                />
-                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 shrink-0 text-white" disabled={!newNote.trim()}>
-                  <Send className="w-4 h-4 mr-2" />
-                  Post
-                </Button>
+              <form onSubmit={handleAddNote} className="flex flex-col gap-3 mt-auto pt-4 border-t border-slate-100">
+                <div className="flex gap-2">
+                  {['Note', 'Call', 'Email', 'Meeting'].map((t) => (
+                    <Button
+                      key={t}
+                      type="button"
+                      variant={newNoteType === t ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="h-7 text-[10px] uppercase tracking-wider font-semibold"
+                      onClick={() => setNewNoteType(t)}
+                    >
+                      {getActivityIcon(t)}
+                      <span className="ml-1.5">{t}</span>
+                    </Button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input 
+                    value={newNote}
+                    onChange={(e: any) => setNewNote(e.target.value)}
+                    placeholder={`Log a ${newNoteType.toLowerCase()}...`}
+                    className="flex-1"
+                  />
+                  <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 shrink-0 text-white" disabled={!newNote.trim()}>
+                    <Send className="w-4 h-4 mr-2" />
+                    Post
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>

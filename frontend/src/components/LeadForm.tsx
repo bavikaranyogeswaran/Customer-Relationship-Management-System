@@ -109,7 +109,7 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
           </select>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Deal Value ($)</label>
+          <label className="text-sm font-medium">Deal Value (LKR)</label>
           <Input type="number" min="0" value={formData.deal_value} onChange={(e: any) => setFormData({...formData, deal_value: Number(e.target.value)})} />
         </div>
         {currentUser?.role === 'admin' && (

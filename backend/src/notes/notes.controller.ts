@@ -17,10 +17,10 @@ export class NotesController {
 
   // CREATE: Appends a new interaction note to a specific lead.
   @Post()
-  create(@Request() req, @Param('leadId') leadId: string, @Body('content') content: string) {
+  create(@Request() req, @Param('leadId') leadId: string, @Body() body: { content: string; type?: string }) {
     // 1. [SECURITY] Validate lead ownership and user authentication
-    // 2. [DB] Persist note record via service layer
-    return this.notesService.create(leadId, req.user.id, content, req.user);
+    // 2. [DB] Persist note record with activity type via service layer
+    return this.notesService.create(leadId, req.user.id, body.content, req.user, { type: body.type });
   }
 
   // FIND BY LEAD: Retrieves all notes associated with a specific lead identifier.
@@ -32,8 +32,8 @@ export class NotesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body('content') content: string, @Request() req) {
-    return this.notesService.update(id, content, req.user);
+  update(@Param('id') id: string, @Body() body: { content: string; version?: number }, @Request() req) {
+    return this.notesService.update(id, body.content, req.user, body.version);
   }
 
   @Delete(':id')

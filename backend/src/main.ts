@@ -11,6 +11,8 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
+process.env.TZ = 'Asia/Colombo';
+
 async function bootstrap() {
   // 1. [PERFORMANCE] Initialize Nest application using the root AppModule
   const app = await NestFactory.create(AppModule);

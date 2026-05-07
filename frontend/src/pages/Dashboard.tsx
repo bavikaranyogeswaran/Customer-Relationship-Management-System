@@ -116,7 +116,7 @@ export default function Dashboard() {
                 <div className="p-2 bg-slate-100 rounded-lg"><DollarSign className="w-5 h-5 text-slate-500" /></div>
                 <div>
                   <div className="text-sm text-slate-500">Total Pipeline Value</div>
-                  <div className="text-xl font-bold">${stats.totalDealValue.toLocaleString()}</div>
+                  <div className="text-xl font-bold">LKR {stats.totalDealValue.toLocaleString()}</div>
                 </div>
               </div>
             </div>
@@ -125,7 +125,7 @@ export default function Dashboard() {
                 <div className="p-2 bg-green-50 rounded-lg"><DollarSign className="w-5 h-5 text-green-600" /></div>
                 <div>
                   <div className="text-sm text-slate-500">Won Deal Value</div>
-                  <div className="text-xl font-bold text-green-600">${stats.totalWonValue.toLocaleString()}</div>
+                  <div className="text-xl font-bold text-green-600">LKR {stats.totalWonValue.toLocaleString()}</div>
                 </div>
               </div>
             </div>
