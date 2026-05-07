@@ -175,28 +175,16 @@ export default function LeadDetails() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost'].map((s) => {
-                const validTransitions: Record<string, string[]> = {
-                  'New': ['Contacted', 'Lost'],
-                  'Contacted': ['Qualified', 'Lost'],
-                  'Qualified': ['Proposal Sent', 'Lost'],
-                  'Proposal Sent': ['Won', 'Lost'],
-                  'Won': [],
-                  'Lost': [],
-                };
-                const isAllowed = validTransitions[lead.status]?.includes(s) || s === lead.status;
-                
-                return (
-                  <DropdownMenuItem 
-                    key={s} 
-                    disabled={!isAllowed || s === lead.status}
-                    onClick={() => handleStatusChange(s)}
-                  >
-                    <Badge variant="outline" className={`${getStatusColor(s)} border-0 px-0 ${!isAllowed ? 'opacity-30' : ''}`}>{s}</Badge>
-                    {s === lead.status && <Check className="ml-auto w-4 h-4 text-slate-400" />}
-                  </DropdownMenuItem>
-                );
-              })}
+              {['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost'].map((s) => (
+                <DropdownMenuItem 
+                  key={s} 
+                  disabled={s === lead.status}
+                  onClick={() => handleStatusChange(s)}
+                >
+                  <Badge variant="outline" className={`${getStatusColor(s)} border-0 px-0`}>{s}</Badge>
+                  {s === lead.status && <Check className="ml-auto w-4 h-4 text-slate-400" />}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -192,7 +192,14 @@ export default function Leads() {
               leads.map((lead) => (
                 <TableRow key={lead.id} className="hover:bg-slate-50/50 cursor-pointer" onClick={() => navigate(`/leads/${lead.id}`)}>
                   <TableCell>
-                    <div className="font-medium text-slate-900">{lead.name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-slate-900">{lead.name}</div>
+                      {!lead.assigned_to && (
+                        <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 text-[10px] h-4 px-1.5 uppercase font-bold">
+                          Unassigned
+                        </Badge>
+                      )}
+                    </div>
                     <div className="text-sm text-slate-500">{lead.company}</div>
                   </TableCell>
                   <TableCell>

@@ -40,8 +40,9 @@ export class LeadsService {
     let paramIndex = 1;
 
     // 2. [SECURITY] Implement record-level access control
+    // Non-admins see: leads assigned to themselves OR unassigned leads (open pool)
     if (user.role !== 'admin') {
-      sql += ` AND assigned_to = $${paramIndex++}`;
+      sql += ` AND (assigned_to = $${paramIndex++} OR assigned_to IS NULL)`;
       params.push(user.id);
     }
 
@@ -104,7 +105,8 @@ export class LeadsService {
     const lead = res.rows[0];
     
     // 2. [SECURITY] Validate permissions
-    if (user.role !== 'admin' && lead.assigned_to !== user.id) {
+    // Unassigned leads (assigned_to IS NULL) are visible to all authenticated users (open pool)
+    if (user.role !== 'admin' && lead.assigned_to !== null && lead.assigned_to !== user.id) {
       throw new ForbiddenException('Access denied');
     }
     return lead;
@@ -121,23 +123,19 @@ export class LeadsService {
       if (targetUser.rows.length === 0) throw new BadRequestException('Target user does not exist');
     }
 
-    // 3. [VALIDATION] Enforce State Machine for Status
+    // 3. [VALIDATION] Validate Status Value (Permissive State Machine)
+    // Any transition between defined statuses is permitted to support real-world
+    // sales scenarios: renegotiations, reversals, and revived lost deals.
+    // Audit trail is maintained via system notes on every status change.
     let statusChanged = false;
     let oldStatus = existing.status;
     let newStatus = data.status;
 
     if (newStatus && newStatus !== oldStatus) {
-      const validTransitions: Record<string, string[]> = {
-        'New': ['Contacted', 'Lost'],
-        'Contacted': ['Qualified', 'Lost'],
-        'Qualified': ['Proposal Sent', 'Lost'],
-        'Proposal Sent': ['Won', 'Lost'],
-        'Won': [],
-        'Lost': [],
-      };
+      const VALID_STATUSES = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost'];
 
-      if (!validTransitions[oldStatus]?.includes(newStatus)) {
-        throw new BadRequestException(`Invalid status transition from ${oldStatus} to ${newStatus}`);
+      if (!VALID_STATUSES.includes(newStatus)) {
+        throw new BadRequestException(`Invalid status value: "${newStatus}". Must be one of: ${VALID_STATUSES.join(', ')}`);
       }
       statusChanged = true;
     }
