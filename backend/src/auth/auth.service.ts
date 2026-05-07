@@ -159,9 +159,13 @@ export class AuthService {
     }
 
     try {
-      this.jwtService.verify(token, {
+      const payload = this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_SECRET') + user.password_hash,
       });
+
+      if (payload.purpose !== 'reset-password' && payload.purpose !== 'onboarding') {
+        throw new UnauthorizedException('Invalid token purpose');
+      }
 
       const hash = await bcrypt.hash(newPassword, 10);
       await this.usersService.updatePassword(user.id, hash);
@@ -173,6 +177,27 @@ export class AuthService {
     } catch (e) {
       throw new UnauthorizedException('Invalid or expired reset token');
     }
+  }
+
+  // GENERATE INVITATION TOKEN: Generates a temporary token for onboarding new users
+  async generateInvitationToken(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user || user.is_active === false) {
+      throw new UnauthorizedException('User does not exist or is inactive');
+    }
+
+    const inviteToken = this.jwtService.sign(
+      { sub: user.id, purpose: 'onboarding' },
+      { 
+        secret: this.configService.get<string>('JWT_SECRET') + user.password_hash,
+        expiresIn: '24h' 
+      }
+    );
+
+    const setupLink = `${this.configService.get<string>('FRONTEND_URL')}/reset-password?token=${inviteToken}&email=${encodeURIComponent(email)}`;
+    await this.mailService.sendInvitationEmail(email, user.name, setupLink);
+
+    return { message: 'Invitation email has been sent.' };
   }
 
 }

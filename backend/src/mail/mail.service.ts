@@ -54,6 +54,46 @@ export class MailService {
     }
   }
 
+  // SEND INVITATION EMAIL: Invites new salespersons to join the platform.
+  async sendInvitationEmail(to: string, name: string, setupLink: string): Promise<void> {
+    try {
+      await this.mailerService.sendMail({
+        to,
+        subject: 'Welcome to the Team! — Invitation to CRM',
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:32px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;">
+            <div style="text-align:center;margin-bottom:24px;">
+              <h1 style="color:#1d4ed8;font-size:24px;margin:0;">CRM System</h1>
+            </div>
+            <h2 style="color:#111827;font-size:20px;">Welcome to the Team, ${name}! 👋</h2>
+            <p style="color:#374151;line-height:1.6;">
+              You have been invited to join our CRM platform as a salesperson. 
+              To get started, click the button below to set up your password and access your account:
+            </p>
+            <div style="text-align:center;margin:32px 0;">
+              <a href="${setupLink}"
+                 style="display:inline-block;background:#1d4ed8;color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;">
+                Complete My Setup
+              </a>
+            </div>
+            <p style="color:#6b7280;font-size:14px;line-height:1.6;">
+              ⏱ This link will expire in <strong>24 hours</strong>.<br/>
+              If you have any questions, please contact your administrator.
+            </p>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;"/>
+            <p style="color:#9ca3af;font-size:12px;text-align:center;">
+              CRM System &mdash; Automated notification, please do not reply.
+            </p>
+          </div>
+        `,
+      });
+      this.logger.log(`Invitation email sent to ${to}`);
+    } catch (error) {
+      this.logger.error(`Failed to send invitation email to ${to}`, error);
+      throw error;
+    }
+  }
+
   // SEND WELCOME EMAIL: Notifies new users that their account is ready.
   async sendWelcomeEmail(to: string, name: string): Promise<void> {
     try {

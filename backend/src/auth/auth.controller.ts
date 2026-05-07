@@ -5,17 +5,25 @@
 // and protected profile retrieval.
 // ==============================================================================
 
-import { Controller, Request, Post, UseGuards, Get, Response, UnauthorizedException, Body } from '@nestjs/common';
+import { Controller, Request, Post, UseGuards, Get, Response, UnauthorizedException, Body, BadRequestException } from '@nestjs/common';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { LocalAuthGuard } from './local-auth.guard';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { UsersService } from '../users/users.service';
+import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
 import type { Response as Res } from 'express';
 
 @Controller('auth')
 export class AuthController {
   // CONSTRUCTOR: Injects AuthService for credential validation and token generation.
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private usersService: UsersService
+  ) {}
 
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @UseGuards(LocalAuthGuard)
@@ -75,4 +83,39 @@ export class AuthController {
   async resetPassword(@Body() body: any) {
     return this.authService.resetPassword(body.email, body.token, body.password);
   }
+
+  // ONBOARD: Administrative endpoint to invite new salespersons.
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Post('onboard')
+  async onboard(@Body() body: { email: string; name: string; role?: string }) {
+    // 1. Check if user already exists
+    const existing = await this.usersService.findByEmail(body.email);
+    if (existing) {
+      throw new BadRequestException('User with this email already exists');
+    }
+
+    // 2. Create user with a random temporary password
+    const tempPassword = crypto.randomBytes(16).toString('hex');
+    const hash = await bcrypt.hash(tempPassword, 10);
+    
+    await this.usersService.adminCreate({
+      email: body.email,
+      password_hash: hash,
+      name: body.name,
+      role: body.role || 'user',
+    });
+
+    // 3. Generate invitation token and send email
+    return this.authService.generateInvitationToken(body.email);
+  }
+
+  // RESEND INVITATION: Administrative endpoint to resend the invitation email.
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Post('resend-invitation')
+  async resendInvitation(@Body('email') email: string) {
+    return this.authService.generateInvitationToken(email);
+  }
+
 }
