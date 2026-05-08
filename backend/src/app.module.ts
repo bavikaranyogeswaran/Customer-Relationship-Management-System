@@ -6,7 +6,7 @@
 // ==============================================================================
 
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import * as Joi from 'joi';
@@ -37,14 +37,22 @@ import { MailModule } from './mail/mail.module';
         MAIL_USER: Joi.string().required(),
         MAIL_PASS: Joi.string().required(),
         MAIL_FROM: Joi.string().required(),
+        // Throttling
+        THROTTLE_TTL: Joi.number().default(60000),
+        THROTTLE_LIMIT: Joi.number().default(100),
       }),
     }),
     // 2. [SECURITY] Implement rate limiting to prevent brute-force attacks and abuse
-    ThrottlerModule.forRoot([{
-      name: 'short',
-      ttl: 60000,
-      limit: 10,
-    }]),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [{
+          name: 'short',
+          ttl: config.get<number>('THROTTLE_TTL') || 60000,
+          limit: config.get<number>('THROTTLE_LIMIT') || 100,
+        }],
+      }),
+    }),
     // 3. Import domain-specific modules
     DatabaseModule, 
     AuthModule, 
