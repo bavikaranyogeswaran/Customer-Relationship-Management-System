@@ -53,6 +53,8 @@ export default function LeadForm({ lead, onClose, onSuccess }: { lead?: any, onC
         await api.patch(`/leads/${lead.id}`, payload);
         toast.success('Lead updated successfully');
       } else {
+        // Strip version for new leads as the backend doesn't expect it on POST
+        delete (payload as any).version;
         await api.post('/leads', payload);
         toast.success('Lead created successfully');
       }
