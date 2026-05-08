@@ -42,6 +42,4 @@ coverage/
 .DS_Store
 Thumbs.db
 backend/.env
-backend/.env.example
 frontend/.env
-frontend/.env.example
