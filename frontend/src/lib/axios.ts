@@ -33,9 +33,9 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (originalRequest.url === '/auth/refresh' || originalRequest.url === '/auth/login') {
+      if (originalRequest.url === '/auth/refresh' || originalRequest.url === '/auth/login' || originalRequest.url === '/auth/logout') {
         localStorage.removeItem('token');
-        if (originalRequest.url !== '/auth/login') {
+        if (originalRequest.url !== '/auth/login' && originalRequest.url !== '/auth/logout') {
           window.location.href = '/login';
         }
         return Promise.reject(error);
@@ -65,7 +65,13 @@ api.interceptors.response.use(
         );
         
         localStorage.setItem('token', data.access_token);
+        
+        // 1. Update default headers for future requests
         api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`;
+        
+        // 2. [FIX] Update the CURRENT request headers before retrying
+        originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+        
         processQueue(null, data.access_token);
         
         return api(originalRequest);

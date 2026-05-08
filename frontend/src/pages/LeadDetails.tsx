@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Trash2, Edit2, Check, X as CloseIcon, MessageSquare, PhoneCall, Mail as MailIcon, Users } from 'lucide-react';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 export default function LeadDetails() {
   const { id } = useParams();
@@ -31,6 +32,8 @@ export default function LeadDetails() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [notesMeta, setNotesMeta] = useState({ page: 1, last_page: 1 });
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
 
   const fetchLeadDetails = useCallback(async () => {
     try {
@@ -99,13 +102,21 @@ export default function LeadDetails() {
   };
 
   const handleDeleteNote = async (noteId: string) => {
-    if (!confirm('Delete this note?')) return;
+    setNoteToDelete(noteId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteNote = async () => {
+    if (!noteToDelete) return;
     try {
-      await api.delete(`/leads/${id}/notes/${noteId}`);
+      await api.delete(`/leads/${id}/notes/${noteToDelete}`);
       toast.success('Note deleted');
       fetchLeadDetails();
+      fetchNotes(1);
     } catch (err) {
       toast.error('Failed to delete note');
+    } finally {
+      setNoteToDelete(null);
     }
   };
 
@@ -385,6 +396,14 @@ export default function LeadDetails() {
           </Card>
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDeleteNote}
+        title="Delete Note"
+        description="Are you sure you want to delete this note? This action cannot be undone."
+        confirmText="Delete"
+      />
     </div>
   );
 }

@@ -108,7 +108,7 @@ export class AuthService {
 
       const newPayload = { email: user.email, sub: user.id, name: user.name, role: user.role };
       return {
-        access_token: this.jwtService.sign(newPayload),
+        access_token: this.jwtService.sign(newPayload, { expiresIn: '8h' }),
         user: newPayload,
       };
     } catch (e) {

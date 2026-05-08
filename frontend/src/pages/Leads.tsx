@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog"
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function Leads() {
   const [leads, setLeads] = useState<any[]>([]);
@@ -27,6 +28,8 @@ export default function Leads() {
   const [users, setUsers] = useState<any[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<any>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
   const [meta, setMeta] = useState({ page: 1, last_page: 1, total: 0 });
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
@@ -72,14 +75,20 @@ export default function Leads() {
   }, [search, status, source, assignedTo, meta.page]);
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this lead?')) {
-      try {
-        await api.delete(`/leads/${id}`);
-        toast.success('Lead deleted');
-        fetchLeads();
-      } catch (err) {
-        toast.error('Failed to delete lead');
-      }
+    setLeadToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!leadToDelete) return;
+    try {
+      await api.delete(`/leads/${leadToDelete}`);
+      toast.success('Lead deleted');
+      fetchLeads();
+    } catch (err) {
+      toast.error('Failed to delete lead');
+    } finally {
+      setLeadToDelete(null);
     }
   };
 
@@ -253,6 +262,15 @@ export default function Leads() {
           />
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Lead"
+        description="Are you sure you want to delete this lead? This action cannot be undone."
+        confirmText="Delete"
+      />
     </div>
   );
 }

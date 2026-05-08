@@ -49,14 +49,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    // 1. [SECURITY] Clear local state immediately to prevent stale UI
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+
+    // 2. Notify backend of session termination
     try {
       await api.post('/auth/logout');
     } catch (e) {
-      console.error('Logout request failed', e);
-    } finally {
-      localStorage.removeItem('token');
-      setToken(null);
-      setUser(null);
+      console.error('Logout request failed (backend session might be already gone)', e);
     }
   };
 
